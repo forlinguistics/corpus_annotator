@@ -5,8 +5,6 @@ def rhyme_scheme(text):
     poem = Poem(text)
     rhyme_sch = poem.rhymed
     if rhyme_sch['rhyme_scheme_accuracy'] >= 0.4:
-        return (True, rhyme_sch['rhyme_scheme'])
+        return (True, rhyme_sch['rhyme_scheme'][1])
     else:
-        return (False,'None')
-
-
+        return (False, 'None')

@@ -1,17 +1,11 @@
 import string
-import prosodic as p
-from nltk.tokenize import word_tokenize
-import nltk
-from nltk.stem import WordNetLemmatizer
 import json
-import spacy
-from meter_type import meter_type
+from meter_type import *
 import os
+import spacy
 from rhyme import rhyme_scheme
 
 nlp = spacy.load("en_core_web_sm")
-
-lem = WordNetLemmatizer()
 
 
 def remove_special_symbols(str):
@@ -25,31 +19,6 @@ def remove_special_symbols(str):
 
 
 """
-returns meter or ??? if it cannot be produced
-"""
-
-
-def meters(line):
-    p.config['print_to_screen'] = False
-    final_jsons = []
-    mline = line.replace('-', ' ')
-    mline = p.Text(mline)
-    mline.parse()
-    i = mline.bestParses()
-    final_json = {}
-    if i != [] and i[0] is not None:
-
-        meter = i[0].str_meter()
-        final_json['meter'] = meter
-
-        # final_json.clear()
-    else:
-        final_json['meter'] = '???'
-
-    return final_json
-
-
-"""
 creates tsakorpus json
 """
 
@@ -57,30 +26,34 @@ creates tsakorpus json
 def tsa_json(meta, corpus_dir):
     text_dic = {}
     txt_file = meta[0]
-    author = meta[1]
+    author = meta[2]
     json_name = txt_file.replace('txt', 'json')
 
     with open(os.path.join(corpus_dir, txt_file), encoding='utf-8') as txt:
         lines = txt.readlines()
-    poem_text = ''.join(lines)
-    lines = [x.strip() for x in lines]
+    poem_text = remove_special_symbols(''.join(lines))
+    lines = [remove_special_symbols(x.strip()) for x in lines]
     text_dic['meta'] = {}
     text_dic['meta']['filename'] = json_name
-    text_dic['meta']['title'] = lines[0]
+    text_dic['meta']['title'] = meta[1]
     text_dic['meta']['author'] = author
     text_dic['meta']['language'] = 'English'
     text_dic['meta']['school/period'] = meta[-1]
     text_dic['meta']['year'] = meta[-2]
     body = []
+    spacy_text = nlp(poem_text)
+    text_words = []
+    text_words = [(i.text, i.lemma_, i.pos_) for i in spacy_text if not i.text in ['\n', '\n\n', '\n \n\n']]
+    word_count = 0
     syl_ar = ''
     if lines[-1] == '':
         i = 1
         while lines[-i - 1] == '':
             i += 1
 
-        body = lines[1:-i]
+        body = lines[:-i]
     else:
-        body = lines[1:]
+        body = lines
     text = []
     stanza = 0
     num_of_stanzas = 1
@@ -94,8 +67,7 @@ def tsa_json(meta, corpus_dir):
             first_stanza.append(line)
         line = remove_special_symbols(line)
         pos_lem = nlp(line)
-        pos_lem_array = [(i.text, i.lemma_, i.pos_) for i in pos_lem]
-        words = pos_lem_array
+        words = [i.text for i in pos_lem]
         line_dict = {}
         line_dict['text'] = line
         wcnt = 0
@@ -109,7 +81,7 @@ def tsa_json(meta, corpus_dir):
         g = 0
         for word in words:
             word_dict = {}
-            word_dict['wf'] = word[0]
+            word_dict['wf'] = word
             if word_dict['wf'] in string.punctuation or word == '’':
                 word_dict['wtype'] = 'punct'
             else:
@@ -123,10 +95,11 @@ def tsa_json(meta, corpus_dir):
             if word_dict['wtype'] == 'word':
                 ana = []
                 ana_dict = {}
-                ana_dict['lex'] = word[1]
-                ana_dict['gr.pos'] = word[2]
+                ana_dict['lex'] = text_words[word_count][1]
+                ana_dict['gr.pos'] = text_words[word_count][2]
                 word_dict['ana'] = [ana_dict]
             words_array.append(word_dict)
+            word_count += 1
         line_dict['words'] = words_array
         line_dict['lang'] = 0
         line_dict['meta'] = meta
@@ -137,6 +110,5 @@ def tsa_json(meta, corpus_dir):
     text_dic['meta']['has_rhyme'] = str(rhyme[0])
     text_dic['meta']['rhyme_scheme'] = rhyme[1]
 
-    with open(os.path.join('jsons',json_name), 'w') as fp:
+    with open(os.path.join('jsons', json_name), 'w') as fp:
         json.dump(text_dic, fp, indent=4)
-
