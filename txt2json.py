@@ -38,7 +38,7 @@ def tsa_json(meta, corpus_dir):
     text_dic['meta']['title'] = meta[1]
     text_dic['meta']['author'] = author
     text_dic['meta']['language'] = 'English'
-    text_dic['meta']['school/period'] = meta[-1]
+    text_dic['meta']['school-period'] = meta[-1]
     text_dic['meta']['year'] = meta[-2]
     body = []
     spacy_text = nlp(poem_text)
